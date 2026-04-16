@@ -1,5 +1,5 @@
 ﻿import pygame
-from settings import HEIGHT, CYAN, WHITE, ORANGE, WIDTH
+from settings import CYAN, WHITE, ORANGE
 from entities.bullet import Bullet
 from utils import clamp
 
@@ -7,7 +7,7 @@ from utils import clamp
 class Player:
     def __init__(self):
         self.x = 120
-        self.y = HEIGHT // 2
+        self.y = 300
         self.w = 48
         self.h = 28
         self.speed = 5
@@ -16,7 +16,6 @@ class Player:
         self.shoot_delay = 120
         self.last_shot = 0
 
-        # calor da arma normal
         self.weapon_heat = 0.0
         self.max_heat = 100.0
         self.heat_per_shot = 9.0
@@ -24,25 +23,35 @@ class Player:
         self.overheat_cool_rate = 42.0
         self.overheated = False
 
-        # munição especial
         self.special_ammo = 0
         self.max_special_ammo = 42
 
     def rect(self):
         return pygame.Rect(self.x, self.y, self.w, self.h)
 
-    def update(self, keys, dt, firing_input):
-        if keys[pygame.K_w] or keys[pygame.K_UP]:
-            self.y -= self.speed
-        if keys[pygame.K_s] or keys[pygame.K_DOWN]:
-            self.y += self.speed
-        if keys[pygame.K_a] or keys[pygame.K_LEFT]:
-            self.x -= self.speed
-        if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
-            self.x += self.speed
+    def update(self, keys, dt, firing_input, move_input, screen_w, screen_h):
+        mx, my = move_input
 
-        self.x = clamp(self.x, 20, WIDTH // 2)
-        self.y = clamp(self.y, 20, HEIGHT - self.h - 20)
+        if keys[pygame.K_w] or keys[pygame.K_UP]:
+            my -= 1
+        if keys[pygame.K_s] or keys[pygame.K_DOWN]:
+            my += 1
+        if keys[pygame.K_a] or keys[pygame.K_LEFT]:
+            mx -= 1
+        if keys[pygame.K_d] or keys[pygame.K_RIGHT]:
+            mx += 1
+
+        if mx != 0 or my != 0:
+            length = (mx * mx + my * my) ** 0.5
+            if length != 0:
+                mx /= length
+                my /= length
+
+        self.x += mx * self.speed
+        self.y += my * self.speed
+
+        self.x = clamp(self.x, 20, screen_w // 2)
+        self.y = clamp(self.y, 20, screen_h - self.h - 20)
 
         self._update_weapon_state(dt, firing_input)
 
@@ -104,7 +113,7 @@ class Player:
             (self.x + 18, self.y + self.h),
         ])
 
-        pygame.draw.circle(screen, WHITE, (self.x + 18, self.y + self.h // 2), 6)
+        pygame.draw.circle(screen, WHITE, (int(self.x + 18), int(self.y + self.h // 2)), 6)
 
         pygame.draw.polygon(screen, ORANGE, [
             (self.x - 10, self.y + self.h // 2),
