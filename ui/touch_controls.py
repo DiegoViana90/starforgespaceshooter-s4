@@ -1,4 +1,5 @@
 ﻿import pygame
+from ui.layout import Layout
 
 
 class TouchControls:
@@ -9,15 +10,11 @@ class TouchControls:
         self.mouse_pos = (0, 0)
 
     def layout(self, screen_w, screen_h):
-        pad_size = int(min(screen_w, screen_h) * 0.18)
-        fire_size = int(min(screen_w, screen_h) * 0.14)
+        layout = Layout(screen_w, screen_h)
+        return layout.touch_rects()
 
-        dpad_rect = pygame.Rect(30, screen_h - pad_size - 30, pad_size, pad_size)
-        fire_rect = pygame.Rect(screen_w - fire_size - 30, screen_h - fire_size - 35, fire_size, fire_size)
-        return dpad_rect, fire_rect
-
-    def visible_for(self, screen_w, screen_h, forced_enabled):
-        return forced_enabled or screen_w <= 1000 or screen_h <= 700
+    def visible_for(self, enabled):
+        return enabled
 
     def finger_down(self, finger_id, x, y, screen_w, screen_h):
         dpad_rect, fire_rect = self.layout(screen_w, screen_h)
@@ -90,32 +87,41 @@ class TouchControls:
     def draw(self, screen, screen_w, screen_h, move_vec, firing):
         dpad_rect, fire_rect = self.layout(screen_w, screen_h)
 
-        base = (255, 255, 255, 40)
         active = (120, 220, 255)
         fire_color = (255, 120, 120) if firing else (255, 255, 255)
 
         pygame.draw.rect(screen, (60, 60, 70), dpad_rect, border_radius=12)
         pygame.draw.rect(screen, (230, 230, 230), dpad_rect, 2, border_radius=12)
 
-        bar_w = dpad_rect.width // 3
-        bar_h = dpad_rect.height
-        h_rect = pygame.Rect(dpad_rect.centerx - dpad_rect.width // 2, dpad_rect.centery - dpad_rect.height // 6, dpad_rect.width, dpad_rect.height // 3)
-        v_rect = pygame.Rect(dpad_rect.centerx - dpad_rect.width // 6, dpad_rect.centery - dpad_rect.height // 2, dpad_rect.width // 3, dpad_rect.height)
+        h_rect = pygame.Rect(
+            dpad_rect.x,
+            dpad_rect.centery - dpad_rect.height // 6,
+            dpad_rect.width,
+            dpad_rect.height // 3
+        )
+        v_rect = pygame.Rect(
+            dpad_rect.centerx - dpad_rect.width // 6,
+            dpad_rect.y,
+            dpad_rect.width // 3,
+            dpad_rect.height
+        )
 
         pygame.draw.rect(screen, (180, 180, 180), h_rect, border_radius=6)
         pygame.draw.rect(screen, (180, 180, 180), v_rect, border_radius=6)
 
         mx, my = move_vec
         if mx == -1:
-            pygame.draw.circle(screen, active, (dpad_rect.left + dpad_rect.width // 4, dpad_rect.centery), 12)
+            pygame.draw.circle(screen, active, (dpad_rect.left + dpad_rect.width // 4, dpad_rect.centery), max(8, dpad_rect.width // 14))
         if mx == 1:
-            pygame.draw.circle(screen, active, (dpad_rect.right - dpad_rect.width // 4, dpad_rect.centery), 12)
+            pygame.draw.circle(screen, active, (dpad_rect.right - dpad_rect.width // 4, dpad_rect.centery), max(8, dpad_rect.width // 14))
         if my == -1:
-            pygame.draw.circle(screen, active, (dpad_rect.centerx, dpad_rect.top + dpad_rect.height // 4), 12)
+            pygame.draw.circle(screen, active, (dpad_rect.centerx, dpad_rect.top + dpad_rect.height // 4), max(8, dpad_rect.width // 14))
         if my == 1:
-            pygame.draw.circle(screen, active, (dpad_rect.centerx, dpad_rect.bottom - dpad_rect.height // 4), 12)
+            pygame.draw.circle(screen, active, (dpad_rect.centerx, dpad_rect.bottom - dpad_rect.height // 4), max(8, dpad_rect.width // 14))
 
         pygame.draw.circle(screen, (70, 70, 80), fire_rect.center, fire_rect.width // 2)
         pygame.draw.circle(screen, fire_color, fire_rect.center, fire_rect.width // 2, 3)
-        label = pygame.font.SysFont("arial", 18).render("FIRE", True, fire_color)
+
+        font = pygame.font.SysFont("arial", max(16, fire_rect.width // 5))
+        label = font.render("FIRE", True, fire_color)
         screen.blit(label, label.get_rect(center=fire_rect.center))

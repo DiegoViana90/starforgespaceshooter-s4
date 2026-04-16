@@ -5,6 +5,7 @@ from settings import WIDTH, HEIGHT, ENEMY_EASY, ENEMY_MEDIUM, ENEMY_HARD
 from entities.bullet import Bullet
 from utils import clamp
 
+
 class Enemy:
     def __init__(self):
         self.kind = random.choice(["hover", "wave", "drifter"])
@@ -40,13 +41,15 @@ class Enemy:
         self.enter_speed = random.uniform(2.0, 2.8)
         self.hold_x = random.randint(700, 860)
 
-        self.base_y = self.y
         self.wave_offset = random.uniform(0, math.tau)
         self.wave_speed = random.uniform(0.02, 0.05)
         self.wave_amplitude = random.randint(18, 36)
 
         self.state = "entering"
         self.hover_timer = 0
+        self.hover_center_y = self.y
+        self.current_y = float(self.y)
+        self.drift_velocity = random.uniform(-0.25, 0.25)
 
     def rect(self):
         return pygame.Rect(int(self.x), int(self.y), self.w, self.h)
@@ -54,10 +57,13 @@ class Enemy:
     def update(self, enemy_bullets, frame_count):
         if self.state == "entering":
             self.x -= self.enter_speed
+            self._move_vertical(frame_count, entering=True)
+
             if self.x <= self.hold_x:
                 self.x = self.hold_x
                 self.state = "hovering"
                 self.hover_timer = 0
+                self.hover_center_y = self.current_y
 
         elif self.state == "hovering":
             self.hover_timer += 1
@@ -76,21 +82,32 @@ class Enemy:
                 Bullet(self.x - 10, self.y + self.h // 2 - 2, -6, 0, "enemy", w=16, h=4)
             )
 
-    def _move_vertical(self, frame_count, slow):
+    def _move_vertical(self, frame_count, slow=False, entering=False):
+        target_y = self.current_y
+
         if self.kind == "hover":
-            speed_mul = 0.8 if slow else 1.0
-            self.y = self.base_y + math.sin(frame_count * self.wave_speed * speed_mul + self.wave_offset) * self.wave_amplitude
+            speed_mul = 0.55 if slow or entering else 0.9
+            target_y = self.hover_center_y + math.sin(
+                frame_count * self.wave_speed * speed_mul + self.wave_offset
+            ) * self.wave_amplitude
 
         elif self.kind == "wave":
-            speed_mul = 1.0 if slow else 1.5
-            amp = self.wave_amplitude + (6 if slow else 12)
-            self.y = self.base_y + math.sin(frame_count * self.wave_speed * speed_mul + self.wave_offset) * amp
+            speed_mul = 0.75 if slow or entering else 1.15
+            amp = self.wave_amplitude + (4 if slow or entering else 10)
+            target_y = self.hover_center_y + math.sin(
+                frame_count * self.wave_speed * speed_mul + self.wave_offset
+            ) * amp
 
         elif self.kind == "drifter":
-            amount = 0.45 if slow else 0.95
-            self.y += math.sin(frame_count * 0.07 + self.wave_offset) * amount
+            drift_strength = 0.18 if slow or entering else 0.35
+            self.drift_velocity += math.sin(frame_count * 0.03 + self.wave_offset) * 0.01
+            self.drift_velocity = max(-0.6, min(0.6, self.drift_velocity))
+            target_y = self.current_y + self.drift_velocity * (1.0 + drift_strength)
 
-        self.y = clamp(self.y, 30, HEIGHT - self.h - 30)
+        # suavização pra nunca "teleportar"
+        self.current_y += (target_y - self.current_y) * 0.12
+        self.current_y = clamp(self.current_y, 30, HEIGHT - self.h - 30)
+        self.y = int(self.current_y)
 
     def draw(self, screen):
         pygame.draw.rect(screen, self.color, (self.x, self.y, self.w, self.h), border_radius=6)
