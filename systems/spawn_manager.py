@@ -13,19 +13,40 @@ def update_spawns(game, dt):
             game.enemies.append(Enemy())
             game.spawn_timer = 0
 
-            if game.spawn_interval > 950:
-                game.spawn_interval -= 12
+            if game.difficulty == "easy":
+                floor = 1050 if game.phase == 1 else 820
+                step = 10 if game.phase == 1 else 14
+            elif game.difficulty == "hard":
+                floor = 820 if game.phase == 1 else 560
+                step = 16 if game.phase == 1 else 22
+            else:
+                floor = 950 if game.phase == 1 else 700
+                step = 12 if game.phase == 1 else 18
+
+            if game.spawn_interval > floor:
+                game.spawn_interval -= step
 
     if game.phase_spawning_done and not game.boss_spawned and len(game.enemies) == 0:
         game.boss_spawned = True
-        game.boss = Boss()
+        game.boss = Boss(phase=game.phase)
 
 
 def update_player_bullets(game):
-    sw, _ = game.screen.get_size()
+    sw, sh = game.screen.get_size()
     for bullet in game.player_bullets[:]:
-        bullet.update()
-        if bullet.x > sw + 40:
+        if hasattr(bullet, "update"):
+            bullet.update()
+
+        alive = getattr(bullet, "alive", True)
+        if not alive:
+            if bullet in game.player_bullets:
+                game.player_bullets.remove(bullet)
+            continue
+
+        if hasattr(bullet, "kind") and bullet.kind == "laser_beam":
+            continue
+
+        if bullet.x > sw + 60 or bullet.y < -60 or bullet.y > sh + 60:
             game.player_bullets.remove(bullet)
 
 
@@ -82,7 +103,11 @@ def maybe_spawn_health_pickup(game, enemy):
     if game.player.hp >= 100:
         return
 
-    if random.random() < 0.18:
+    chance = 0.22 if game.difficulty == "easy" else 0.18 if game.difficulty == "medium" else 0.12
+    if game.phase == 2:
+        chance *= 0.9
+
+    if random.random() < chance:
         px = enemy.x + enemy.w // 2 - 9
         py = enemy.y + enemy.h // 2 - 9
         game.pickups.append(game.HealthPickup(px, py))
@@ -92,11 +117,12 @@ def maybe_spawn_weapon_pickup(game, enemy):
     chance = 0.0
 
     if getattr(enemy, "level", "") == "medium":
-        chance = 0.35
+        chance = 0.45 if game.difficulty == "easy" else 0.35 if game.difficulty == "medium" else 0.25
     elif getattr(enemy, "level", "") == "hard":
-        chance = 0.65
+        chance = 0.80 if game.difficulty == "easy" else 0.65 if game.difficulty == "medium" else 0.50
 
     if random.random() < chance:
+        weapon_type = random.choice(["triple", "spread", "laser"])
         px = enemy.x + enemy.w // 2 - 10
         py = enemy.y + enemy.h // 2 - 10
-        game.weapon_pickups.append(game.WeaponPickup(px, py))
+        game.weapon_pickups.append(game.WeaponPickup(px, py, weapon_type))

@@ -131,46 +131,21 @@ class Game:
 
     def options_buttons(self):
         from ui.layout import Layout
+        base = Layout(*self.screen.get_size()).options_buttons()
 
-        layout = Layout(*self.screen.get_size())
-        base = layout.options_buttons()
-
+        # adiciona botão de dificuldade no meio
         sound = base["sound"]
         touch = base["touch"]
+        back = base["back"]
 
-        gap = max(12, int(16 * layout.scale))
-
-        difficulty = pygame.Rect(
-            sound.x,
-            touch.y + touch.h + gap,
-            sound.w,
-            sound.h,
-        )
-
-        back = pygame.Rect(
-            sound.x,
-            difficulty.y + difficulty.h + int(gap * 1.5),
-            sound.w,
-            sound.h,
-        )
+        diff = pygame.Rect(sound.x, touch.y + touch.h + int(16 * max(1, self.screen.get_height() / 600)), sound.w, sound.h)
+        back = pygame.Rect(back.x, diff.y + diff.h + int(24 * max(1, self.screen.get_height() / 600)), back.w, back.h)
 
         return {
             "sound": sound,
             "touch": touch,
-            "difficulty": difficulty,
+            "difficulty": diff,
             "back": back,
-        }
-
-    def pause_buttons(self):
-        sw, sh = self.screen.get_size()
-        bw = min(320, int(sw * 0.34))
-        bh = 56
-        x = sw // 2 - bw // 2
-        y = sh // 2 - 10
-
-        return {
-            "resume": pygame.Rect(x, y, bw, bh),
-            "exit": pygame.Rect(x, y + 76, bw, bh),
         }
 
     def run(self):
@@ -239,14 +214,6 @@ class Game:
                     elif buttons["back"].collidepoint(pos):
                         self.menu_state = "main_menu"
 
-                elif self.menu_state == "playing" and self.paused:
-                    buttons = self.pause_buttons()
-                    if buttons["resume"].collidepoint(pos):
-                        self.paused = False
-                    elif buttons["exit"].collidepoint(pos):
-                        self.paused = False
-                        self.menu_state = "main_menu"
-
                 elif self.menu_state == "playing" and self.mobile_controls_enabled and not self.paused:
                     self.touch_controls.mouse_down(pos, sw, sh)
 
@@ -304,7 +271,7 @@ class Game:
         self.player.update(keys, dt, firing_input, (tx, ty), sw, sh)
 
         if firing_input:
-            fired = self.player.try_fire(self.player_bullets, sw)
+            fired = self.player.try_fire(self.player_bullets)
             if fired:
                 self.sound.play("shoot")
 
@@ -318,26 +285,6 @@ class Game:
         update_weapon_pickups(self)
         handle_collisions(self)
         update_explosions(self)
-
-    def draw_pause_menu(self):
-        sw, sh = self.screen.get_size()
-        buttons = self.pause_buttons()
-
-        title_font = pygame.font.SysFont("arial", 46, bold=True)
-        font = pygame.font.SysFont("arial", 24)
-
-        title = title_font.render("PAUSE", True, WHITE)
-        self.screen.blit(title, title.get_rect(center=(sw // 2, sh // 2 - 80)))
-
-        for rect in buttons.values():
-            pygame.draw.rect(self.screen, (45, 45, 70), rect, border_radius=12)
-            pygame.draw.rect(self.screen, WHITE, rect, 2, border_radius=12)
-
-        resume = font.render("RETORNAR", True, WHITE)
-        exit_label = font.render("EXIT", True, WHITE)
-
-        self.screen.blit(resume, resume.get_rect(center=buttons["resume"].center))
-        self.screen.blit(exit_label, exit_label.get_rect(center=buttons["exit"].center))
 
     def draw(self):
         self.screen.fill(BLACK)
@@ -381,9 +328,6 @@ class Game:
             exp.draw(self.screen)
 
         draw_hud(self)
-
-        if self.paused:
-            self.draw_pause_menu()
 
         sw, sh = self.screen.get_size()
         if self.touch_controls.visible_for(self.mobile_controls_enabled) and not self.paused:

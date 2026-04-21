@@ -20,7 +20,7 @@ def draw_menu(game):
     game.screen.blit(subtitle, subtitle.get_rect(center=(sw // 2, int(sh * 0.39))))
 
     font = layout.font(24)
-    buttons = layout.menu_buttons()
+    buttons = game.menu_buttons()
 
     for rect in buttons.values():
         pygame.draw.rect(game.screen, (45, 45, 70), rect, border_radius=12)
@@ -39,16 +39,25 @@ def draw_options(game):
     font = layout.font(24)
 
     title = title_font.render("OPTIONS", True, CYAN)
-    game.screen.blit(title, title.get_rect(center=(sw // 2, int(sh * 0.22))))
+    game.screen.blit(title, title.get_rect(center=(sw // 2, int(sh * 0.20))))
 
-    buttons = layout.options_buttons()
+    buttons = game.options_buttons()
+
     for rect in buttons.values():
         pygame.draw.rect(game.screen, (45, 45, 70), rect, border_radius=12)
         pygame.draw.rect(game.screen, WHITE, rect, 2, border_radius=12)
 
     sound_label = "SOUND: ON" if game.sound.enabled else "SOUND: OFF"
     touch_label = "TOUCH CONTROLS: ON" if game.mobile_controls_enabled else "TOUCH CONTROLS: OFF"
+    difficulty_label = f"DIFFICULTY: {game.difficulty.upper()}"
 
-    for text, key in [(sound_label, "sound"), (touch_label, "touch"), ("BACK", "back")]:
+    items = [
+        (sound_label, "sound"),
+        (touch_label, "touch"),
+        (difficulty_label, "difficulty"),
+        ("BACK", "back"),
+    ]
+
+    for text, key in items:
         label = font.render(text, True, WHITE)
         game.screen.blit(label, label.get_rect(center=buttons[key].center))
